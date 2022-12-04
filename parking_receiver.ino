@@ -1,45 +1,78 @@
 #include <RH_ASK.h>
 #include <SPI.h>
-#define NUM_SENSORS 3
+#define CHECK_VAL 3
 
-RH_ASK driver(2000, 8, 7, 6, false); // initialize RH_ASK driver in order to use wire
-uint8_t distances[2];
+uint8_t echoPin = 7;
+uint8_t trigPin = 8;
+uint8_t id = 1;
+
+uint8_t distance;
+uint8_t avg_dist = 0;
+RH_ASK driver;
+enum FSM {ACQUIRE, TRANSMIT} state;
+uint8_t values[CHECK_VAL];
+uint8_t num_vals = 0;
 
 void setup() {
-
-  Serial.begin(115200);   
-  digitalWrite(SS, HIGH);
-  if (!driver.init())
-		Serial.println("init failed");
-
-  // initialize SPI by dividing clock frequency by 8
-  SPI.begin();
-  SPI.setClockDivider(SPI_CLOCK_DIV8);
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+    if(!driver.init()) {
+        Serial.println("Failed!");
+    }
+  state = ACQUIRE;
 }
 
-void loop()
-{
-    uint8_t buf[2];
-    uint8_t buflen = sizeof(buf);
-    if (driver.recv(buf, &buflen)) // Non-blocking
-    {
-    	int i;
-      // Message with a good checksum received, dump it.
-      distances[0] = buf[1];
-      distances[1] = buf[0];
-      
-      Serial.print("ID: ");
-      Serial.println(buf[1]);
-      Serial.print("Dist: ");
-      Serial.println(buf[0]);
+uint8_t* constructMessage() {
+    uint8_t* message = new uint8_t[2];
+    message[0] = avg_dist;
+    message[1] = id;
+    return message;
+}
 
-      // transfer data using SPI
-      digitalWrite(SS, LOW);
-      SPI.transfer(distances[0]);
-      SPI.transfer(distances[1]);
-      digitalWrite(SS, HIGH);
-      // add delay to ensure proper response.
-      delay(1000);
+void tick() {
+    switch(state) {
+        case ACQUIRE:
+                Serial.print("Acquiring Distance: ");
+                digitalWrite(trigPin, HIGH);
+                delayMicroseconds(10);
+                digitalWrite(trigPin, LOW);
+                distance = int(.017 * pulseIn(echoPin, HIGH));
+        Serial.println(distance);
+        values[num_vals % CHECK_VAL] = distance;
+        num_vals = num_vals + 1;
+                if(num_vals % CHECK_VAL == 0) {
+          state = TRANSMIT;
+        }
+                break;
+    case TRANSMIT:
+        uint16_t new_avg = 0;
+        for(uint8_t i = 0; i < CHECK_VAL; i++) {
+            new_avg += values[i];
+        }
+
+        new_avg /= CHECK_VAL;
+        Serial.print("Prev Average:");
+        Serial.println(avg_dist);
+        Serial.print("New Average:");
+        Serial.println(new_avg);
+        if(abs(avg_dist - new_avg) >= 5 || avg_dist == 0) {
+          avg_dist = new_avg;
+          Serial.print("Attempting Transmission..");
+          driver.send(constructMessage(), 2);
+          driver.waitPacketSent();
+          Serial.print("Sent from ID: ");
+          Serial.println(id);
+        }
+        state = ACQUIRE;
+                break;
+        default:
+                break;
     }
+}
 
+void loop() {
+  delay(2000);
+  tick();
 }

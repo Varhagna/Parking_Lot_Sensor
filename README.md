@@ -18,6 +18,9 @@ The following project was completed using Processor Expert on the Freescale Kine
 [Here](https://youtu.be/u2SxbELsy7A) is a link to the Youtube Video that shows the essence of the functionality.
 
 ## Schematic
-![image](/repository/images/ee128.png?raw=true)
+![ee128](https://user-images.githubusercontent.com/19560788/205479588-659dbb60-e63a-453b-af02-a6b62484e92a.png)
+
 
 ## Acknowledgements
+
+We would like to thank Dr. Roman Chomko for his well written lecture slides and notes that guided us through this project.

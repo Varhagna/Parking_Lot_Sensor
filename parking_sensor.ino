@@ -1,10 +1,10 @@
 #include <RH_ASK.h>
 #include <SPI.h>
-#define CHECK_VAL 10
+#define CHECK_VAL 3
 
 uint8_t echoPin = 7;
 uint8_t trigPin = 8;
-uint8_t id = 2;
+uint8_t id = 1;
 
 uint8_t distance;
 uint8_t avg_dist = 0;
@@ -14,38 +14,38 @@ uint8_t values[CHECK_VAL];
 uint8_t num_vals = 0;
 
 void setup() {
-	// put your setup code here, to run once:
-	Serial.begin(115200);
-	pinMode(trigPin, OUTPUT);
-	pinMode(echoPin, INPUT);
-	if(!driver.init()) {
-		Serial.println("Failed!");
-	}
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+    if(!driver.init()) {
+        Serial.println("Failed!");
+    }
   state = ACQUIRE;
 }
 
 uint8_t* constructMessage() {
-	uint8_t* message = new uint8_t[2];
-	message[0] = avg_dist;
-	message[1] = id;
-	return message;
+    uint8_t* message = new uint8_t[2];
+    message[0] = avg_dist;
+    message[1] = id;
+    return message;
 }
 
 void tick() {
-	switch(state) {
-		case ACQUIRE:
-				Serial.print("Acquiring Distance: ");
-				digitalWrite(trigPin, HIGH);
-				delayMicroseconds(10);
-				digitalWrite(trigPin, LOW);
-				distance = int(.017 * pulseIn(echoPin, HIGH));
+    switch(state) {
+        case ACQUIRE:
+                Serial.print("Acquiring Distance: ");
+                digitalWrite(trigPin, HIGH);
+                delayMicroseconds(10);
+                digitalWrite(trigPin, LOW);
+                distance = int(.017 * pulseIn(echoPin, HIGH));
         Serial.println(distance);
         values[num_vals % CHECK_VAL] = distance;
         num_vals = num_vals + 1;
-				if(num_vals % CHECK_VAL == 0) {
+                if(num_vals % CHECK_VAL == 0) {
           state = TRANSMIT;
         }
-				break;
+                break;
     case TRANSMIT:
         uint16_t new_avg = 0;
         for(uint8_t i = 0; i < CHECK_VAL; i++) {
@@ -66,13 +66,13 @@ void tick() {
           Serial.println(id);
         }
         state = ACQUIRE;
-				break;
-		default:
-				break;
-	}
+                break;
+        default:
+                break;
+    }
 }
 
 void loop() {
-  delay(10000);
+  delay(2000);
   tick();
 }
